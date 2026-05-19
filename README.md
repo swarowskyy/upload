@@ -7,3 +7,6 @@ cd .\upload\
  http://localhost:3000/
  npx nest g resource arquivo
  
+
+ secaso der errado 
+  npm install @types/multe
