@@ -33,7 +33,11 @@ export class ArquivoService {
             criado:stats.birthtime,
           }
         }
-      )
+      );
+      return{
+        total:fileList.length,
+        files: fileList,
+      }
     } catch (error) {
       throw new  BadGatewayException('Não foi possível listar os arquivos')
      }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, BadGatewayException, UploadedFile } from '@nestjs/common';
 import { ArquivoService } from './arquivo.service';
 import { CreateArquivoDto } from './dto/create-arquivo.dto';
 import { UpdateArquivoDto } from './dto/update-arquivo.dto';
@@ -22,6 +22,12 @@ export class ArquivoController {
       }),
     }),
   )
+  uploadFile(@UploadedFile()file:Express.Multer.File){
+    if(!file){
+      throw new BadGatewayException("Não foi possível enviar o arquivo")
+    }
+    return this.arquivoService.findAll();
+  }
   @Get()
   findAll() {
     return this.arquivoService.findAll();
