@@ -17,6 +17,7 @@ Caso queira entender a arquitetura ou reconstruir este ecossistema do zero, aqui
    Utilizamos o gerador do Nest para criar toda a estrutura (Controller, Service, Module e DTOs) para a entidade arquivo:
 
    nest g resource arquivo
+   ```bash
 depois...
    npm run start
 Com isso, a API inicial já fica disponível em: http://localhost:3000/
