@@ -1,7 +1,11 @@
-import { BadGatewayException, Injectable } from '@nestjs/common';
+// Adicione o NotFoundException no import do nestjs
+import { BadGatewayException, Injectable, NotFoundException } from '@nestjs/common';
+import * as path from 'path';
 import { CreateArquivoDto } from './dto/create-arquivo.dto';
 import { UpdateArquivoDto } from './dto/update-arquivo.dto';
 import * as fs from 'fs'
+// Adicione o NotFoundException no import do nestjs
+
 
 @Injectable()
 export class ArquivoService {
@@ -52,7 +56,24 @@ export class ArquivoService {
     return `This action updates a #${id} arquivo`;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} arquivo`;
+ // aqui: Lógica de exclusão física
+  remove(filename: string) {
+    // Localiza o arquivo na pasta ./drive
+    const filePath = path.join(this.pastaUpload, filename);
+
+    // se o arquivo não existir, retorna 404 
+    if (!fs.existsSync(filePath)) {
+      throw new NotFoundException('Arquivo não encontrado no servidor.');
+    }
+
+    // se existir, deleta do armazenamento
+    try {
+      fs.unlinkSync(filePath);
+      return {
+        message: `Arquivo ${filename} deletado com sucesso.`,
+      };
+    } catch (error) {
+      throw new BadGatewayException('Erro ao tentar remover o arquivo do servidor.');
+    }
   }
 }
