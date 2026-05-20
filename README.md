@@ -19,7 +19,7 @@ Antes de começar, você vai precisar ter instalado em sua máquina:
 
 1. **Clone o repositório do GitHub:**
    ```bash
-   git clone [https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git](https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git)
+   git clone (https://github.com/swarowskyy/upload)
 Acesse a pasta do projeto:
 
 Bash
