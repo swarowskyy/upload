@@ -1,9 +1,7 @@
-// Adicione o NotFoundException no import do nestjs
-import { BadGatewayException, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import * as path from 'path';
-import * as fs from 'fs';
+import { BadRequestException, Injectable, NotFoundException, PayloadTooLargeException } from '@nestjs/common';
+import { CreateArquivoDto } from './dto/create-arquivo.dto';
 import { UpdateArquivoDto } from './dto/update-arquivo.dto';
-// ... seus outros imports (dtos, etc)
+import * as fs from 'fs';
 
 @Injectable()
 export class ArquivoService {
@@ -14,72 +12,61 @@ export class ArquivoService {
       fs.mkdirSync(this.pastaUpload, { recursive: true });
     }
   }
-
+  //retorna os dados do arquivo após o upload
   create(arquivo: Express.Multer.File) {
-    if (!arquivo) {
-      throw new BadGatewayException("Não foi possível enviar o arquivo");
+ //limite de 5 MB
+    const limiteMaximo = 5 * 1024 * 1024; // isso faz o computador saber se o arquivo tem 5 MB
+    if (arquivo.size > limiteMaximo) {
+      // essa parte vai limpar o arquivo temporaria que o multer criou,o chat me sugerio essa parte 
+      if (fs.existsSync(arquivo.path)) fs.unlinkSync(arquivo.path);
+      
+      //essa parte retorna para o cliente o erro 413 de forma explicada
+      throw new PayloadTooLargeException('O arquivo enviado excede o limite permitido de 5MB.');
     }
 
-    // 1. Validação de Formato (MimeType) - Equivalente ao fileFilter do controller
-    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/tiff'];
-    if (!allowedMimeTypes.includes(arquivo.mimetype)) {
-      throw new BadRequestException('Formato inválido. Apenas JPG, PNG e TIFF são permitidos ser colocados.');
+    // forma de arquivo
+    const extensoesPermitidas = ['.jpg', '.jpeg', '.png', '.tiff'];
+    // pega o nome original e coloca tudo em minuscula
+    const ext = arquivo.originalname.substring(arquivo.originalname.lastIndexOf('.')).toLowerCase();
+
+    if (!extensoesPermitidas.includes(ext)) {
+      // essa parte limpa qual quer arquivo invalido do disco
+      if (fs.existsSync(arquivo.path)) fs.unlinkSync(arquivo.path);
+      
+      // essa parte retorna para o cliente o erro 400 de forma explicada
+      throw new BadRequestException('Formato inválido. Apenas imagens JPG, JPEG, PNG e TIFF são permitidas.');
     }
 
-    // 2. Validação de Tamanho - Equivalente ao limits do controller (5MB)
-    const maxSize = 5 * 1024 * 1024;
-    if (arquivo.size > maxSize) {
-      throw new BadRequestException('O arquivo excede o limite de tamanho permitido (5MB).');
-    }
-
-    // 3. Lógica de geração do nome único do arquivo
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    const ext = path.extname(arquivo.originalname);
-    const finalFilename = `${arquivo.fieldname}-${uniqueSuffix}${ext}`;
-
-    // Define o caminho completo de onde o arquivo será salvo
-    const filePath = path.join(this.pastaUpload, finalFilename);
-
-    try {
-      // 4. Grava o arquivo fisicamente no disco usando o buffer da memória
-      fs.writeFileSync(filePath, arquivo.buffer);
-
-      return {
-        message: 'Arquivo enviado com sucesso',
-        __filename: finalFilename,
-        originalname: arquivo.originalname,
-        size: arquivo.size,
-      };
-    } catch (error) {
-      // Caso ocorra algum erro na escrita do arquivo (ex: falta de permissão na pasta)
-      throw new BadGatewayException('Erro ao tentar salvar o arquivo no servidor.');
-    }
+    return {
+      message: 'Arquivo enviado com sucesso!',
+      __filename: arquivo.filename,
+      originalname: arquivo.originalname,
+      size: arquivo.size,
+    };
   }
 
-  // ... seus outros métodos (findAll, findOne, update, remove) permanecem iguais
 
   findAll() {
     try {
       const files = fs.readdirSync(this.pastaUpload);
       const fileList = files.map(
-        (__filename)=>{
-          const stats= fs.statSync(`${this.pastaUpload}/${__filename}`)
-          return{
+        (__filename) => {
+          const stats = fs.statSync(`${this.pastaUpload}/${__filename}`);
+          return {
             __filename,
-            size:stats.size,
-            criado:stats.birthtime,
-          }
+            size: stats.size,
+            criado: stats.birthtime,
+          };
         }
       );
-      return{
-        total:fileList.length,
+      return {
+        total: fileList.length,
         files: fileList,
-      }
+      };
     } catch (error) {
-      throw new  BadGatewayException('Não foi possível listar os arquivos')
-     }
+      throw new BadRequestException('Não foi possivel listar os arquivos.')
     }
-  
+  }
 
   findOne(id: number) {
     return `This action returns a #${id} arquivo`;
@@ -89,24 +76,24 @@ export class ArquivoService {
     return `This action updates a #${id} arquivo`;
   }
 
- // aqui: Lógica de exclusão física
-  remove(filename: string) {
-    // Localiza o arquivo na pasta ./drive
-    const filePath = path.join(this.pastaUpload, filename);
+ remove(nome: string) {
+    const caminhoArquivo = `${this.pastaUpload}/${nome}`;
 
-    // se o arquivo não existir, retorna 404 
-    if (!fs.existsSync(filePath)) {
-      throw new NotFoundException('Arquivo não encontrado no servidor.');
+    // aqui verifica se o arquivo realmente existe na pasta './drive'
+    if (!fs.existsSync(caminhoArquivo)) {
+      // aqui retorna para o cliente caso o arquivo não exista
+      throw new NotFoundException(`O arquivo com o nome "${nome}" não foi encontrado.`);
     }
 
-    // se existir, deleta do armazenamento
     try {
-      fs.unlinkSync(filePath);
+      // Remove o arquivo fisicamente do armazenamento local
+      fs.unlinkSync(caminhoArquivo);
+      
       return {
-        message: `Arquivo ${filename} deletado com sucesso.`,
+        message: `Arquivo "${nome}" foi removido com sucesso do servidor.`
       };
     } catch (error) {
-      throw new BadGatewayException('Erro ao tentar remover o arquivo do servidor.');
+      throw new BadRequestException('Não foi possível remover o arquivo.');
     }
   }
 }
